@@ -1,0 +1,43 @@
+name: CI: Run gradle tasks and upload logs
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  run-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Prepare Gradle command
+        run: |
+          if [ -x "./gradlew" ]; then
+            chmod +x ./gradlew
+            echo "GRADLE_CMD=./gradlew" >> $GITHUB_ENV
+          elif [ -x "./app/gradlew" ]; then
+            chmod +x ./app/gradlew
+            echo "GRADLE_CMD=./app/gradlew" >> $GITHUB_ENV
+          else
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            echo "GRADLE_CMD=gradle" >> $GITHUB_ENV
+          fi
+
+      - name: Run gradle tasks
+        run: |
+          set -o pipefail
+          $GRADLE_CMD tasks --all --stacktrace --info --scan 2>&1 | tee gradle-tasks.log
+
+      - name: Upload gradle log
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-tasks-log
+          path: gradle-tasks.log
