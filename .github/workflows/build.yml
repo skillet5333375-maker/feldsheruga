@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      KEYSTORE_PASSWORD: DOOM1432!${{ secrets.KEYSTORE_PASSWORD }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
     steps:
@@ -43,9 +43,25 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
+      - name: Prepare Gradle command
+        run: |
+          if [ -x "./gradlew" ]; then
+            echo "Using ./gradlew"
+            chmod +x ./gradlew
+            echo "GRADLE_CMD=./gradlew" >> $GITHUB_ENV
+          elif [ -x "./app/gradlew" ]; then
+            echo "Using ./app/gradlew"
+            chmod +x ./app/gradlew
+            echo "GRADLE_CMD=./app/gradlew" >> $GITHUB_ENV
+          else
+            echo "No gradlew found, installing gradle via apt"
+            sudo apt-get update
+            sudo apt-get install -y gradle
+            echo "GRADLE_CMD=gradle" >> $GITHUB_ENV
+          fi
+
       - name: Build release APK
-        run: ./gradlew clean assembleRelease --no-daemon
-        # Если в корне не gradlew — поправьте путь (например ./app/gradlew)
+        run: $GRADLE_CMD clean assembleRelease --no-daemon
 
       - name: Find APK
         id: find_apk
