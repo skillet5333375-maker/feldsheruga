@@ -1,0 +1,78 @@
+name: Build and release Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Generate keystore
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/app
+          keytool -genkeypair -v \
+            -keystore $GITHUB_WORKSPACE/app/release.keystore \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            -keypass "$KEY_PASSWORD" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=GitHub Actions, OU=CI, O=GitHub, L=Internet, ST=None, C=US"
+
+      - name: Create keystore properties for Gradle
+        run: |
+          cat > $GITHUB_WORKSPACE/app/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build release APK
+        run: ./gradlew clean assembleRelease --no-daemon
+        # Если в корне не gradlew — поправьте путь (например ./app/gradlew)
+
+      - name: Find APK
+        id: find_apk
+        run: |
+          apk=$(find ./ -type f -path "*/app/build/outputs/apk/*/release/*.apk" | head -n 1)
+          if [ -z "$apk" ]; then
+            echo "No APK found"
+            exit 1
+          fi
+          echo "path=$apk" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: "apk-${{ github.run_number }}-${{ github.sha }}"
+          release_name: "Automated APK build #${{ github.run_number }}"
+          body: "Automatically built signed APK"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK to Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find_apk.outputs.path }}
+          asset_name: app-release.apk
+          asset_content_type: application/vnd.android.package-archive
