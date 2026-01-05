@@ -62,7 +62,13 @@ jobs:
 
       - name: Build release APK
         run: $GRADLE_CMD clean assembleRelease --no-daemon
-
+module=$(find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.kts \) -exec grep -Il "com\.android\.application\|com\.android\.library" {} \; | head -n1 | xargs -r dirname)
+  if [ -z "$module" ]; then
+ echo "No Android module found"
+ exit 1
+ fi
+ echo "Building module: $module"
+  (cd "$module" && $GRADLE_CMD clean assembleRelease --no-daemon)
       - name: Find APK
         id: find_apk
         run: |
