@@ -76,7 +76,7 @@ jobs:
       - name: Find APK
         id: find_apk
         run: |
-          apk=$(find ./ -type f -path "*/app/build/outputs/apk/*/release/*.apk" | head -n 1)
+          apk=$(find ./ -type f \( -path "*/app/build/outputs/apk/*/release/*.apk" -o -path "*/app/build/outputs/apk/release/*.apk" \) | head -n 1)
           if [ -z "$apk" ]; then
             echo "No APK found"
             exit 1
