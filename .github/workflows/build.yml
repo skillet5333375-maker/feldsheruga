@@ -102,6 +102,8 @@ jobs:
           asset_path: ${{ steps.find_apk.outputs.path }}
           asset_name: app-release.apk
           asset_content_type: application/vnd.android.package-archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish download link
         run: |
