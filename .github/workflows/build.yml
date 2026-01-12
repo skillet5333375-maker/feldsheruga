@@ -49,11 +49,11 @@ jobs:
           if [ -x "./gradlew" ]; then
             echo "Using ./gradlew"
             chmod +x ./gradlew
-            echo "GRADLE_CMD=./gradlew" >> $GITHUB_ENV
+            echo "GRADLE_CMD=$GITHUB_WORKSPACE/gradlew" >> $GITHUB_ENV
           elif [ -x "./app/gradlew" ]; then
             echo "Using ./app/gradlew"
             chmod +x ./app/gradlew
-            echo "GRADLE_CMD=./app/gradlew" >> $GITHUB_ENV
+            echo "GRADLE_CMD=$GITHUB_WORKSPACE/app/gradlew" >> $GITHUB_ENV
           else
             echo "No gradlew found, installing gradle via apt"
             sudo apt-get update
