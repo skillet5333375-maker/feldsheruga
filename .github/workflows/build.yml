@@ -13,6 +13,7 @@ jobs:
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      APK_TAG: apk-${{ github.run_number }}-${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,14 +62,17 @@ jobs:
           fi
 
       - name: Build release APK
-        run: $GRADLE_CMD clean assembleRelease --no-daemon
-module=$(find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.kts \) -exec grep -Il "com\.android\.application\|com\.android\.library" {} \; | head -n1 | xargs -r dirname)
-  if [ -z "$module" ]; then
- echo "No Android module found"
- exit 1
- fi
- echo "Building module: $module"
-  (cd "$module" && $GRADLE_CMD clean assembleRelease --no-daemon)
+        run: |
+          module=$(find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.kts \) \
+            -exec grep -Il "com\\.android\\.application\\|com\\.android\\.library" {} \; \
+            | head -n1 | xargs -r dirname)
+          if [ -n "$module" ]; then
+            echo "Building module: $module"
+            (cd "$module" && $GRADLE_CMD clean assembleRelease --no-daemon)
+          else
+            echo "No Android module found, building from repository root"
+            $GRADLE_CMD clean assembleRelease --no-daemon
+          fi
       - name: Find APK
         id: find_apk
         run: |
@@ -83,7 +87,7 @@ module=$(find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.
         id: create_release
         uses: actions/create-release@v1
         with:
-          tag_name: "apk-${{ github.run_number }}-${{ github.sha }}"
+          tag_name: ${{ env.APK_TAG }}
           release_name: "Automated APK build #${{ github.run_number }}"
           body: "Automatically built signed APK"
           draft: false
@@ -98,3 +102,9 @@ module=$(find . -maxdepth 3 -type f \( -name build.gradle -o -name build.gradle.
           asset_path: ${{ steps.find_apk.outputs.path }}
           asset_name: app-release.apk
           asset_content_type: application/vnd.android.package-archive
+
+      - name: Publish download link
+        run: |
+          download_url="https://github.com/${{ github.repository }}/releases/download/${{ env.APK_TAG }}/app-release.apk"
+          echo "APK download: $download_url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download URL: $download_url"
