@@ -15,7 +15,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var store: TemplateStore
     private lateinit var adapter: TemplateAdapter
+    private lateinit var algorithmAdapter: AlgorithmAdapter
     private val templates = mutableListOf<TemplateCard>()
+    private val algorithms = listOf(
+        AlgorithmCard(
+            title = "Остановка массивного кровотечения",
+            body = "1. Оценить безопасность.\n2. Наложить жгут/давящую повязку выше раны.\n3. Отметить время.\n4. Контроль кровотечения.\n5. Подготовка к транспортировке."
+        ),
+        AlgorithmCard(
+            title = "СЛР у взрослого",
+            body = "1. Проверить сознание и дыхание.\n2. Вызвать помощь, вызвать 112.\n3. 30 компрессий грудной клетки.\n4. 2 вдоха.\n5. Повторять 30:2 до прибытия помощи."
+        ),
+        AlgorithmCard(
+            title = "Инсульт (FAST)",
+            body = "1. Лицо: асимметрия.\n2. Руки: слабость.\n3. Речь: нарушение.\n4. Время: срочно вызвать помощь."
+        )
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +45,15 @@ class MainActivity : AppCompatActivity() {
             onEdit = { template -> openEditor(template) },
             onCopy = { template -> copyTemplate(template) }
         )
+
+        algorithmAdapter = AlgorithmAdapter(
+            algorithms,
+            onOpen = { algorithm -> openAlgorithm(algorithm) },
+            onCopy = { algorithm -> copyAlgorithm(algorithm) }
+        )
+
+        binding.algorithmList.layoutManager = LinearLayoutManager(this)
+        binding.algorithmList.adapter = algorithmAdapter
 
         binding.templateList.layoutManager = LinearLayoutManager(this)
         binding.templateList.adapter = adapter
@@ -76,6 +100,21 @@ class MainActivity : AppCompatActivity() {
         val clip = ClipData.newPlainText(template.title, template.body)
         clipboard.setPrimaryClip(clip)
         Toast.makeText(this, getString(R.string.copied_toast), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun openAlgorithm(algorithm: AlgorithmCard) {
+        AlertDialog.Builder(this)
+            .setTitle(algorithm.title)
+            .setMessage(algorithm.body)
+            .setPositiveButton(R.string.close, null)
+            .show()
+    }
+
+    private fun copyAlgorithm(algorithm: AlgorithmCard) {
+        val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(algorithm.title, algorithm.body)
+        clipboard.setPrimaryClip(clip)
+        Toast.makeText(this, getString(R.string.copied_algorithm_toast), Toast.LENGTH_SHORT).show()
     }
 
     private fun refreshEmptyState() {
